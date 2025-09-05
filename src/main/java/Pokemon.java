@@ -10,7 +10,7 @@ public abstract class Pokemon {
         this.hp = hp;
     }
 
-    // Método polimórfico y abstracto
+    // Método polimórfico y abstracto para ser usado en las clases workers que sean necesarias
     public abstract double calcularDanio(Pokemon objetivo);
 
     // Sobrecarga 1: Atacar sin considerar el clima
@@ -50,7 +50,7 @@ public abstract class Pokemon {
         System.out.println(this.nombre + " recibe " + danio + " de daño. Le quedan " + this.hp + " HP.");
     }
 
-    // Métodos utilitarios
+    // Métodos utilitarios, geters y setters en la Abstracta.
     public String getNombre() {
         return nombre;
     }
