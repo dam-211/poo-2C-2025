@@ -1,0 +1,75 @@
+@startuml
+skinparam classAttributeIconSize 0
+top to bottom direction
+
+abstract class Persona {
+        
+  # nombre:String
+  # apellido:String
+  # direccion:String
+  # telefono:String
+  # email:String
+  + actualizarInfo(nom:String, email:String): void
+  + getId(): int
+  + getNombre(): String
+  + getApellido(): String
+}
+
+class Paciente {
+  - fechaNacimiento:String
+  - seguroMedico:String
+  - historialClinico:HistorialClinico
+  + getSeguroMedico(): String
+}
+
+class Odontologo { 
+- especialidad:String 
+- numeroColegiatura:String 
+}
+class Administrativo { 
+- rol:String }
+
+class HistorialClinico { - registros: List<RegistroAtencion> }
+
+class PracticaOdontologica {
+  - id:int
+  - nombre:String
+  - descripcion:String
+  - costo:double
+  + calcularCosto(p:Paciente): double
+}
+
+class RegistroAtencion {
+  - id:int
+  - paciente:Paciente
+  - odontologo:Odontologo
+  - practicas: List<PracticaOdontologica>
+  - fecha:String
+  - notas:String
+  + calcularCostoTotal(): double
+}
+
+class GestionAdministrativa {
+  - id:int
+  - tipo:String
+  - descripcion:String
+  - fecha:String
+  - responsable:Administrativo
+  + emitirInforme(): String
+}
+
+Persona <|-- Paciente       : <<es un>>
+Persona <|-- Odontologo     : <<es un>>
+Persona <|-- Administrativo : <<es un>>
+
+Paciente "1" *-- "1" HistorialClinico : <<compone>>
+HistorialClinico "1" o-- "0..*" RegistroAtencion : <<contiene>>
+
+RegistroAtencion "1" -- "1" Paciente               : <<para>>
+RegistroAtencion "1" -- "1" Odontologo             : <<por>>
+RegistroAtencion "1" -- "1..*" PracticaOdontologica: <<incluye>>
+
+PracticaOdontologica ..> Paciente : <<usa>> (calcularCosto)
+
+GestionAdministrativa "0..*" -- "1" Administrativo : <<responsable>>
+@enduml
