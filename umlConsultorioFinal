@@ -1,0 +1,150 @@
+@startuml
+skinparam class {
+    BorderColor #8A92A6
+    BackgroundColor #E5EBF8
+    ArrowColor #3F4860
+}
+skinparam note {
+    BackgroundColor #F8F8A6
+    BorderColor #B2A363
+}
+
+top to bottom direction
+
+abstract class Persona {
+#id:int
+#nombre: String
+#direccion: String
+#telefono: String
+#email:String
+
++actualizarInformacion(direccion: String, email: String, telefono: String)
++getId(): int
++getNombre(): String
++getEmail(): String
+
+}
+
+class Paciente {
+-fechaDeNacimiento: String
+-seguroMedico: String
++getSeguroMedico(): String
+
+}
+
+class Odontologo {
+-especialidad: String
+-matriculaProfesional: String
+}
+
+class Administrativo {
+-rol: String
+
+}
+
+
+'====== GESTION DE DATOS ========
+
+class HistorialClinico{
+-registros: List<RegistroDeAtencion>
+}
+
+class PracticaOdontologica{
+-id: int
+-nombre: String
+-descripcion: String
+-costo: Double
++calcularCosto(paciente: Paciente): Double
+
+}
+
+class RegistroAtencion {
+-id: int
+-paciente: Paciente
+-odontologo: Odontologo
+-practicas: List<PracticaOdontologica>
+-fechaDePractica: String
+-notas: String
++calcularCostoTotal(): Double
+
+}
+
+class GestionAdministrativa {
+-id: int
+-tipo: String
+-descripcion: String
+-fecha: String
+-responsable: Administrativo
++emitirInforme(): String
+}
+
+
+class Consultorio {
+-pacientes: List<Paciente>
+-odontologos: List<Odontologo>
+-administrativos: List<Administrativo>
+-atenciones: List<RegistroAtencion>
+-practicasOfrecidas: List<PracticaOdontologica>
++registrarPaciente(paciente: Paciente): void
++emitirInforme(tipo: String): String
+
+}
+
+'Relaciones de HERENCIA
+Persona <|-- Paciente : es un
+Persona <|-- Odontologo : es un
+Persona <|-- Administrativo : es un
+
+'Composición: Un paciente tiene una historia clinica
+
+Paciente "1" *--"1" HistorialClinico : <<tiene>>
+
+'Agregacion: Un historial clinico contiene registros, pero los registros pueden existir por si solos!!
+
+HistorialClinico "1" o-- "0.." RegistroAtencion : <<contiene>>
+
+'Asociaciones de registro de atencion
+'Cada registro se realiza para un paciente y un odontologo
+RegistroAtencion "0..*" -- "1" Paciente : <<para>>
+RegistroAtencion "0..*" -- "1.." Odontologo : <<por>>
+
+'Un registro, incluye 1 o mas prácticas
+RegistroAtencion "0..*" -- "1..*" PracticaOdontologica : <<incluye>>
+
+'Gestion administrativa es manejada por un administrativo
+
+GestionAdministrativa "0..*" -- "1" Administrativo : <<responsable>>
+
+'Dependencia del cálculo
+'calcularCosto en PracticaOdontologica usa informacion del Paciente
+
+PracticaOdontologica .l.> Paciente : «usa»
+
+'Agregacion de la clase consultorio
+'El consultorio gestiona todas las relaciones de los objetos
+
+Consultorio "1" 0-- "0..*" Paciente : <<gestiona>>
+Consultorio "1" 0-- "0..*" Odontologo : <<emplea>>
+Consultorio "1" 0-- "0..*" Administrativo : <<emplea>>
+Consultorio "1" 0-- "0..*" RegistroAtencion : <<registra>>
+Consultorio "1" 0-- "0..*" PracticaOdontologica : <<ofrece>>
+
+'===NOTAS ACLARATORIOAS AL MODELO ===
+
+note right of Persona
+  Clase Abstracta.
+  Define atributos y métodos comunes para
+ todos los roles de persona.
+end note
+
+note right of PracticaOdontologica
+  **Polimorfimo**
+  El metodo calcularCosto() puede ser
+  sobreescrito para diferentes tipos de 
+  practicas o seguros
+end note
+
+note "Un Consultorio centraliza la gestión de todas las entidades, como se detalla en los requisitos del problema." as N1
+Consultorio .. N1
+
+@enduml
