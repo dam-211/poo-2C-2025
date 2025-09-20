@@ -1,0 +1,346 @@
+@startuml
+
+' ------------------- Configuración visual --------
+left to right direction
+skinparam roundcorner 20
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Arial"
+
+
+legend top
+  |= Símbolo |= Relación |= Descripción |
+  | <|-- | Herencia | Relación "es-un" |
+  | *--  | Composición | Parte-de (ciclo de vida dependiente) |
+  | o--  | Agregación  | Tiene-un (ciclo de vida independiente) |
+  | -->  | Asociación  | Vinculación estructural |
+  | ..>  | Dependencia | Uso puntual (no estructural) |
+endlegend
+
+' --------------------- Enums ------
+enum EstadoOperativo {
+  ACTIVO
+  INACTIVO
+  MANTENIMIENTO
+}
+
+enum Turno {
+  MANIANA
+  TARDE
+  NOCHE
+}
+
+' Entidad Externa
+class RedElectrica <<externa>> {
+  + nombre: String
+  + codigoInterconexion: String
+  + tensionNominalKV: double
+  + frecuenciaHz: double
+  + recibirEnergia(mw: double): void
+  + solicitarDespacho(mw: double): void
+}
+
+' --------------------------- Núcleo ---------------------------
+class PlantaEnergia {
+  - id: String
+  - nombre: String
+  - ubicacion: String
+  - fechaPuestaEnMarcha: String
+  - unidades: List<UnidadGeneracion>
+  - banco: BancoBaterias
+  - sala: SalaControl
+  - contrato: ContratoCAMMESA
+  + getCapacidadInstaladaMW(): double
+  + getProduccionInstantaneaMW(): double
+  + registrarNuevaUnidad(u: UnidadGeneracion): void
+  + removerUnidadGeneracionPorId(id: String): boolean
+  + conectarRed(red: RedElectrica): void
+  + iniciarOperacion(): void
+  + detenerOperacion(): void
+  + asignarOperador(o: Operador, unidades: List<UnidadGeneracion>): void
+}
+
+' La Sala de Control es única en la planta
+class SalaControl {
+  - id: String
+  - ubicacion: String
+  - umbralAlertaMW: double
+  - umbralFalla: String
+  - operadoresDeTurno: List<Operador>
+  + notificarAlarma(msg: String): void
+  + registrarIncidente(codigo: String, detalle: String): void
+  + asignarOperador(op: Operador): void
+  + removerOperador(legajo: String): boolean
+  + obtenerResumen(): String
+}
+
+class SoftwareMonitoreo {
+  - version: String
+  - ultimoReporteGenerado: String
+  - db: BaseDeDatosExterna
+  + monitorear(unidad: UnidadGeneracion): void
+  + generarReporteProduccion(fecha: String): ReportePDF
+  + consultarHistorial(unidadId: String, desde: String, hasta: String): List<double>
+  + calcularKPIs(fecha: String): Map<String,double>
+  + registrarEvento(unidad: UnidadGeneracion, evento: String): void
+}
+
+class BaseDeDatosExterna <<externa>> {
+  - endpoint: String
+  - proveedor: String
+  - apiKey: String
+  + registrarEvento(evento: String): void
+  + guardarMedicion(unidadId: String, valor: double, fecha: String): void
+  + obtenerMediciones(unidadId: String, desde: String, hasta: String): List<double>
+}
+
+class ReportePDF {
+  - nombreArchivo: String
+  - generadoEl: String
+  - contenido: String
+  - tamanoKB: int
+  - numeroPaginas: int
+  + agregarSeccion(titulo: String, texto: String): void
+  + exportar(): void
+  + descargar(ruta: String): boolean
+}
+
+' -------------------- Generación de energía -------------------
+abstract class UnidadGeneracion <<Mantenible>> {
+  # id: String
+  # estado: EstadoOperativo
+  # capacidadMaximaMW: double
+  # produccionActualMW: double
+  # ubicacion: String
+  # fabricante: String
+  # fechaUltimoMantenimiento: String
+  + arrancar(): void
+  + parar(): void
+  + leerProduccion(): double
+  + registrarMedicion(valorMW: double, fecha: String): void
+  + programarMantenimiento(fecha: String): void
+  + asignarIngeniero(eng: Ingeniero): void
+  + getDisponibilidad(): double
+}
+
+class PanelSolar {
+  - superficieM2: double
+  - anguloIncidencia: double
+  - eficiencia: double
+  - temperaturaPanelC: double
+  + ajustarAngulo(nuevo: double): void
+  + calcularIrradiancia(desde: String, hasta: String): double
+  + estimarProduccionDiaria(): double
+}
+
+class TurbinaEolica {
+  - alturaM: double
+  - numeroAspas: int
+  - rpmActual: double
+  - umbralFreno: double
+  - direccionViento: String
+  - velocidadVientoMS: double
+  + activarFrenoSeguridad(): void
+  + setUmbralFreno(nuevo: double): void
+  + ajustarPitchAspas(grados: double): void
+}
+
+abstract class TurbinaHidraulica {
+  - caudalActualM3s: double
+  - nivelEmbalseM: double
+  + regularCaudal(abertura: int): void
+  + abrirCompuerta(porcentaje: int): void
+  + cerrarCompuerta(): void
+  + estimarProduccion(caudalM3s: double): double
+}
+
+class TurbinaKaplan {
+  - inclinacionAspas: double
+  + ajustarInclinacion(nuevo: double): void
+}
+
+class TurbinaFrancis {
+  - diametroRodete: double
+  + calibrarRodete(): void
+}
+
+' --------------------- Almacenamiento -------------------------
+class BancoBaterias {
+  - id: String
+  - eficienciaRoundTrip: double
+  - perdidasMW: double
+  - modulos: List<ModuloBateria>
+  + almacenarEnergia(mw: double): void
+  + suministrarEnergia(mw: double): double
+  + nivelCargaTotal(): double
+  + balancearCargas(): void
+  + estadoSalud(): double
+}
+
+class ModuloBateria {
+  - codigo: String
+  - cargaActualKWh: double
+  - capacidadMaxKWh: double
+  - temperaturaC: double
+  - voltajeV: double
+  - ciclosCarga: int
+  + conectar(): void
+  + desconectar(): void
+  + actualizarCarga(deltaKWh: double): void
+  + estadoSalud(): double
+}
+
+' -------------------- Personal y terceros ---------------------
+abstract class Empleado {
+  # nombre: String
+  # legajo: String
+  # turno: Turno
+  # dni: String
+  # email: String
+  + getNombre(): String
+  + getLegajo(): String
+  + cambiarTurno(nuevo: Turno): void
+}
+
+class Ingeniero {
+  - especializacion: String
+  - herramientas: List<HerramientaDiagnostico>
+  + ejecutarPlanDeMantenimiento(u: UnidadGeneracion): void
+  + planificarMantenimiento(u: UnidadGeneracion, fecha: String): void
+  + validarSeguridad(u: UnidadGeneracion): boolean
+}
+
+class Operador {
+  - unidadesAsignadas: List<UnidadGeneracion>
+  + monitorear(u: UnidadGeneracion): void
+  + iniciarTurno(): void
+  + finalizarTurno(): void
+  + generarAlerta(u: UnidadGeneracion, mensaje: String): void
+}
+
+class Proveedor <<provider>> {
+  - empresaContratista: String
+  - nombre: String
+  - cuit: String
+  - telefono: String
+  - responsableStaff: Empleado
+  + setResponsable(e: Empleado): void
+  + realizarMantenimientoPreventivo(u: UnidadGeneracion): void
+}
+
+' ------------------ Herramientas de diagnóstico ---------------
+interface HerramientaDiagnostico {
+  + diagnosticar(u: UnidadGeneracion): String
+  + calibrar(fecha: String): void
+  + version(): String
+}
+
+class HerramientaSolar {
+  + diagnosticar(u: UnidadGeneracion): String
+  + calibrar(fecha: String): void
+  + version(): String
+  + medirIrradiancia(): double
+
+  - modelo: String
+  + medirRadiacion(): double
+}
+
+class HerramientaEolica {
+  + diagnosticar(u: UnidadGeneracion): String
+  + calibrar(fecha: String): void
+  + version(): String
+  + medirVelocidadViento(): double
+
+  - modelo: String
+  + medirVelocidadViento(): double
+}
+
+class HerramientaHidraulica {
+  + diagnosticar(u: UnidadGeneracion): String
+  + calibrar(fecha: String): void
+  + version(): String
+  + medirCaudal(): double
+
+  - modelo: String
+  + medirCaudal(): double
+}
+
+' ---------------------- Contratos / Mercado -------------------
+class ContratoCAMMESA {
+  - numeroContrato: String
+  - fechaVigenciaDesde: String
+  - fechaVigenciaHasta: String
+  - condiciones: String
+  - potenciaComprometidaMW: double
+  - precioPactadoUSD_MWh: double
+  - penalidades: String
+  + esVigente(fecha: String): boolean
+  + registrarDespacho(mw: double, fecha: String): void
+  + reportarCumplimiento(): double
+}
+
+' ======================= Relaciones ===========================
+PlantaEnergia *-- "1..*" UnidadGeneracion : tiene una o varias
+UnidadGeneracion <|-- PanelSolar : es un
+UnidadGeneracion <|-- TurbinaEolica : es un
+UnidadGeneracion <|-- TurbinaHidraulica : es un
+TurbinaHidraulica <|-- TurbinaKaplan : es un
+TurbinaHidraulica <|-- TurbinaFrancis : es un
+
+UnidadGeneracion --> "1" BancoBaterias : inyecta energía
+BancoBaterias o-- "1..*" ModuloBateria : gestiona
+PlantaEnergia *-- "1" SalaControl : tiene una
+SalaControl --> "1" SoftwareMonitoreo : opera
+SoftwareMonitoreo --> BaseDeDatosExterna : persiste mediciones
+SoftwareMonitoreo ..> ReportePDF : «crea un»
+
+Operador --> "*" UnidadGeneracion : monitorea
+Ingeniero --> UnidadGeneracion : mantiene
+Proveedor --> UnidadGeneracion : mantenimiento preventivo
+
+HerramientaDiagnostico <|.. HerramientaSolar : extend
+HerramientaDiagnostico <|.. HerramientaEolica : extend
+HerramientaDiagnostico <|.. HerramientaHidraulica :extend
+
+HerramientaSolar ..> PanelSolar : «usa»
+HerramientaEolica ..> TurbinaEolica : «usa»
+HerramientaHidraulica ..> TurbinaHidraulica : «usa»
+
+Ingeniero ..> HerramientaDiagnostico : «utiliza»
+
+PlantaEnergia --> "1" ContratoCAMMESA : regula operación
+ContratoCAMMESA --> "1" RedElectrica : vincula con SADI
+
+note right of UnidadGeneracion
+  Clase abstracta con atributos y
+  operaciones comunes a todas las unidades.
+  Vemos herencia y polimorfismo.
+end note
+
+note bottom of BancoBaterias
+  Agregación: los módulos pueden
+  existir independientemente y ser
+  reemplazados.
+end note
+
+note top of PlantaEnergia
+  Composición con las unidades y la sala
+  de control: su ciclo de vida depende
+  de la planta.
+end note
+
+note right of SoftwareMonitoreo
+  Depende de una BaseDeDatosExterna para
+  persistir eventos/mediciones. La creación
+  de ReportePDF es una dependencia puntual.
+end note
+
+note as N1
+  Cardinalidades destacadas:
+  - Planta 1..* Unidades (composición)
+  - Banco 1..* Módulos (agregación)
+  - Operador * Unidades (asociación)
+end note
+N1 .. PlantaEnergia
+
+@enduml
