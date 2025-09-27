@@ -1,0 +1,240 @@
+@startuml
+
+left to right direction
+skinparam roundcorner 12
+
+title **Biblioteca Pública**
+
+' =======
+legend top
+  |= Símbolo |= Relación |= Sentido didáctico |
+  | <|--      | Herencia     | "es un" (especialización) |
+  | ..|>      | Implementa   | Clase realiza una interfaz |
+  | *--       | Composición  | Parte no existe sin el todo |
+  | o--       | Agregación   | "tiene un" (vida independiente) |
+  | -->       | Asociación   | Uso/colaboración |
+endlegend
+
+
+'========== enum
+
+enum Periodicidad {
+    SEMANAL
+    MENSUAL
+    QUINCENAL
+    SEMESTRAL
+    TRIMESTRAL
+    ANUAL
+}
+
+enum FormatoArchivo {
+    PDF
+  EPUB
+  CBR
+  CBZ
+  MOBI
+  AZW
+
+}
+
+enum RolesBibliotecario {
+    
+    ATENCION_PUBLICO
+    GESTION_TECNICA
+    ADMISTRACION
+    SEGURIDAD
+
+}
+
+enum EstadoCopia {
+    
+    DISPONIBLE
+    PRESTADO
+    ROBADO
+    RETRASADO
+
+}
+
+enum EstadoReserva {
+    
+    PENDIENTE
+    CANCELADA
+    MODIFICADA
+}
+'==== Núcleo: Material y subtipos
+
+abstract class Material {
+
+    - codigo: String
+    - titulo: String
+    - fechaPublicacion: Date
+    - autores: List<Autores>
+    
+    +esReservable(): boolean
+    +getInfo(): String
+}
+
+
+class LibroImpreso {
+
+    - isbn: String
+    - ubicacionGeneral: String
+    
+    +getUbicacion(): String
+
+}
+
+class Revista {
+    - issn: String
+    - perioricidad: Perioricidad
+    - numeroEdicion: Int
+    
+    +getPeriodicidad(): Peridicidad
+}
+
+class EBook {
+
+    - tamanioMB: double
+    - formato: FormatoArchivio
+}
+
+class AudioLibro {
+
+    - duracionMinutos: int
+    - narrador: String
+}
+
+Material <|-- Revista: hereda
+Material <|-- LibroImpreso: hereda
+Material <|-- EBook: hereda
+Material <|-- AudioLibro: hereda
+
+
+'==== Usuarios y personal ===
+
+abstract class Usuario {
+
+    - id: Long
+    - nombreCompleto: String
+    - email: String
+}
+
+class Lector {
+
+    - numeroDeSocio: String
+    
+    +solicitarPrestamo(material: Material): void
+    +reservarMaterial(material: Material): void
+    +accederMaterialDigital(recursoDigital: Recurso Digital): void
+}
+
+class Bibliotecario {
+
+    - legajo: String
+    - rol: RolesBibliotecario
+    
+    +registrarPrestamo(material: Material): void
+    +registrarDevolucion(material: Material): void
+    +gestionarReserva(recursoDigital: Recurso Digital): void
+}
+
+Usuario <|-- Lector: hereda
+Usuario <|-- Bibliotecario: hereda
+
+
+'====== Transacciones y reglas de negocio ====
+
+class Prestamo {
+    
+    - id: String
+    - fechaInicio: Date
+    - fechaDevolucion: Date
+    - estadoSalida: EstadoCopia
+    
+    +esVencido(): boolean
+    +calcularMulta(): double
+
+}
+
+class Reserva {
+
+    - id: String
+    - fecha: Date
+    - estado: EstadoReserva
+    
+    +activarReserva(): void
+    +cancelarReserva(): void
+}
+
+class AccesoDigital {
+    
+    - id: String
+    - fechaHora: Date
+    - tipoAcceso: String
+    - ip: String
+    
+    +registrar(): void
+
+}
+
+class Autor {
+
+    - nombre: String
+    - apellido: String
+    - nacionalidad: String
+    -epoca: String
+    
+    +getNombreCompleto(): String
+    +getNacionalidad(): String
+}
+
+class Editorial {
+    -id: int
+    -nombreEditorial: String
+    
+}
+
+'Agregacion!
+Material "1" o-- "0..*" Autor :autores
+Material "1" o-- "1..*" Editorial: edita
+
+'Relaciones transaccionales + cardinalidades
+
+Prestamo "0..*" --> "1" Lector
+Prestamo "0..*" --> "1" Bibliotecario: procesadorPor
+
+AccesoDigital "1" --> "1" Lector
+Reserva "1" --> "1" Material
+Reserva "1" --> "1" Lector
+
+'=========== Entidad raiz contenedora de contenedores =====
+
+class Biblioteca {
+    - nombre: String
+    - resposable: Biblotecario
+    - direccion: String
+    
+    +registrarUsuario(tipoUsuario: Usuario): void
+    +altaNuevoMaterial(material: Material): void
+    +buscarPorTitulo(titulo: String): String
+    
+}
+'Biblioteca "1"  *-- "1..*" Material: El material podría vivir fuera de la biblioteca
+Biblioteca "1"  o-- "1..*" Material
+'Nota: Acá el usuario es lógico, es decir, si elimino la biblioteca, elimino los usuarios de la "base"
+Biblioteca "1" *-- "1..*" Usuario 
+'Si por ejemplo fueran personas de existencia real sería más adecuado: Biblioteca "1" o-- "0..*"
+'Dado que, el usuario puede existir más allá de que la bilbioteca cierre y la biblioteca puede ser un ente sin persoans ;)
+Biblioteca "1" o-- "0..*" Prestamo
+Biblioteca "1" o-- "0..*" Reserva
+Biblioteca "1" o-- "0..*" AccesoDigital
+
+' ===NOTAS DE ACLARACION AL MODELO
+
+note bottom of Biblioteca
+    **Biblioteca** actúa como agregador raíz para orquestar
+    colecciones y operaciones de alto nivel sin acomplamiento de las entidades
+    entre si de forma incesearia.
+end note
+
+@enduml
