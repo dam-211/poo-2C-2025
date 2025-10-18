@@ -57,3 +57,9 @@ Tendremos las siguientes clases con sus datos, pero **sin** métodos de lógica 
 - **Resultado:** **SistemaPOS** (o `ControladorVentas`) implementa `iniciarVenta()` y `agregarItemAVenta()`, delegando:
   - **Creación de ventas** a **RegistroVentas** (Creator).
   - **Cálculo y agregado de ítems** a **Venta/DetalleVenta** (Expert).
+ 
+## Consigas:
+
+- Diseñar en lenguaje Java, una solución al problema anteriormente planteado.
+- Realizar el diagrama UML correspondiente (plnatUML)
+- Realizar al menos 3 implmenetaciones de prueba en el método main().
